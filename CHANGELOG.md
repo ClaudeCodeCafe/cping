@@ -19,6 +19,6 @@ All notable changes to this project will be documented in this file.
 - Homebrew tap support
 - Standalone single-file execution
 - Smoke tests and unit tests with mocked HTTP
-- CI with Python 3.8, 3.9, 3.12 matrix
+- CI with Python 3.8–3.12 matrix
 
 [0.1.0]: https://github.com/ClaudeCodeCafe/cping/releases/tag/v0.1.0
