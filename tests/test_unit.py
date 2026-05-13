@@ -161,6 +161,99 @@ class TestDisplayStatus(unittest.TestCase):
         self.assertNotIn("x" * 201, output)
 
 
+class TestMalformedNestedValues(unittest.TestCase):
+    """Tests for malformed nested API fields that should not crash."""
+
+    def test_status_field_is_string(self):
+        """status field is a string instead of dict -- should not crash."""
+        data = {
+            "components": [
+                {"name": "API", "status": "operational", "showcase": True},
+            ],
+            "status": "not_a_dict",
+            "page": {"updated_at": "2026-05-13T09:00:00Z"},
+            "incidents": [],
+        }
+        captured = io.StringIO()
+        with patch("sys.stdout", captured):
+            result = cli.display_status(data, use_color=False)
+        self.assertTrue(result)
+
+    def test_page_field_is_string(self):
+        """page field is a string instead of dict -- should not crash."""
+        data = {
+            "components": [
+                {"name": "API", "status": "operational", "showcase": True},
+            ],
+            "status": {"indicator": "none"},
+            "page": "not_a_dict",
+            "incidents": [],
+        }
+        captured = io.StringIO()
+        with patch("sys.stdout", captured):
+            result = cli.display_status(data, use_color=False)
+        self.assertTrue(result)
+
+    def test_incidents_field_is_string(self):
+        """incidents field is a string instead of list -- should not crash."""
+        data = {
+            "components": [
+                {"name": "API", "status": "operational", "showcase": True},
+            ],
+            "status": {"indicator": "none"},
+            "page": {"updated_at": "2026-05-13T09:00:00Z"},
+            "incidents": "not_a_list",
+        }
+        captured = io.StringIO()
+        with patch("sys.stdout", captured):
+            result = cli.display_status(data, use_color=False)
+        self.assertTrue(result)
+
+    def test_incident_updates_is_string(self):
+        """incident_updates is a string instead of list -- should not crash."""
+        data = {
+            "components": [
+                {"name": "API", "status": "operational", "showcase": True},
+            ],
+            "status": {"indicator": "none"},
+            "page": {"updated_at": "2026-05-13T09:00:00Z"},
+            "incidents": [
+                {
+                    "name": "Test",
+                    "status": "investigating",
+                    "impact": "minor",
+                    "incident_updates": "not_a_list",
+                }
+            ],
+        }
+        captured = io.StringIO()
+        with patch("sys.stdout", captured):
+            result = cli.display_status(data, use_color=False)
+        self.assertTrue(result)
+
+    def test_incident_update_entry_is_string(self):
+        """First entry in incident_updates is a string -- should not crash."""
+        data = {
+            "components": [
+                {"name": "API", "status": "operational", "showcase": True},
+            ],
+            "status": {"indicator": "none"},
+            "page": {"updated_at": "2026-05-13T09:00:00Z"},
+            "incidents": [
+                {
+                    "name": "Test",
+                    "status": "investigating",
+                    "impact": "minor",
+                    "incident_updates": ["not_a_dict"],
+                }
+            ],
+        }
+        captured = io.StringIO()
+        with patch("sys.stdout", captured):
+            result = cli.display_status(data, use_color=False)
+        self.assertTrue(result)
+
+
 class TestMainExitCodes(unittest.TestCase):
     """Tests for main() exit codes."""
 

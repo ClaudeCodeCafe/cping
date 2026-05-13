@@ -113,10 +113,13 @@ def display_status(data, use_color):
         print("Error: unexpected API response format", file=sys.stderr)
         return False
 
-    status_info = data.get("status") or {}
+    status_raw = data.get("status") or {}
+    status_info = status_raw if isinstance(status_raw, dict) else {}
     raw_components = data.get("components") or []
-    incidents = data.get("incidents") or []
-    page = data.get("page") or {}
+    incidents_raw = data.get("incidents") or []
+    incidents = incidents_raw if isinstance(incidents_raw, list) else []
+    page_raw = data.get("page") or {}
+    page = page_raw if isinstance(page_raw, dict) else {}
 
     # Validate component entries
     components = [
@@ -184,8 +187,9 @@ def display_status(data, use_color):
             print(f"    Status: {inc_status}")
 
             # Show latest update if available
-            updates = incident.get("incident_updates", [])
-            if updates:
+            updates_raw = incident.get("incident_updates", [])
+            updates = updates_raw if isinstance(updates_raw, list) else []
+            if updates and isinstance(updates[0], dict):
                 latest = updates[0]
                 body = latest.get("body", "")
                 if body:

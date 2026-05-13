@@ -9,7 +9,7 @@ at `https://status.claude.com/api/v2/summary.json`.
 ## Structure
 
 ```
-cping                  # Thin wrapper (imports from src/cping/cli.py)
+cping                  # Standalone copy of src/cping/cli.py (with shebang)
 src/cping/
   __init__.py          # Package init, re-exports __version__
   __main__.py          # python -m cping support
@@ -53,14 +53,14 @@ bash tests/smoke.sh
 Run unit tests:
 
 ```bash
-python -m pytest tests/test_unit.py -v
+python -m unittest tests.test_unit -v
 ```
 
 ## Rules
 
 - Include `Co-Authored-By: Claude` in commit messages (ClaudeCodeCafe org rule)
 - Keep zero external dependencies
-- `./cping` is a thin wrapper that imports from `src/cping/cli.py` (single source of truth)
+- `./cping` is a standalone copy of `src/cping/cli.py` (with shebang); CI enforces they stay in sync
 - Follow PEP 8
 - English only for all code, comments, and docs
 - Exit codes: 0 = all operational, 1 = error, 2 = degraded

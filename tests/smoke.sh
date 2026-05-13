@@ -51,8 +51,10 @@ set +e
 JSON_OUTPUT=$($CPING --json 2>&1)
 JSON_EXIT=$?
 set -e
-if [ "$JSON_EXIT" -eq 1 ]; then
+if [ "$JSON_EXIT" -eq 1 ] && echo "$JSON_OUTPUT" | grep -q "Failed to connect\|HTTP"; then
     skip "--json: network unavailable"
+elif [ "$JSON_EXIT" -eq 1 ]; then
+    fail "--json: unexpected error: $JSON_OUTPUT"
 elif echo "$JSON_OUTPUT" | python3 -m json.tool > /dev/null 2>&1; then
     pass "--json outputs valid JSON"
 else
@@ -62,13 +64,15 @@ fi
 # Test 4: Default run exits 0 or 2 (network required)
 echo "Test: default exit code"
 set +e
-$CPING --no-color > /dev/null 2>&1
+DEFAULT_OUTPUT=$($CPING --no-color 2>&1)
 EXIT_CODE=$?
 set -e
 if [ "$EXIT_CODE" -eq 0 ] || [ "$EXIT_CODE" -eq 2 ]; then
     pass "default run exits with $EXIT_CODE (0 or 2 expected)"
-elif [ "$EXIT_CODE" -eq 1 ]; then
+elif [ "$EXIT_CODE" -eq 1 ] && echo "$DEFAULT_OUTPUT" | grep -q "Failed to connect\|HTTP"; then
     skip "default exit code: network unavailable"
+elif [ "$EXIT_CODE" -eq 1 ]; then
+    fail "default run: unexpected error: $DEFAULT_OUTPUT"
 else
     fail "default run exited with $EXIT_CODE (expected 0 or 2)"
 fi
@@ -79,8 +83,10 @@ set +e
 NOCOLOR_OUTPUT=$($CPING --no-color 2>&1)
 NOCOLOR_EXIT=$?
 set -e
-if [ "$NOCOLOR_EXIT" -eq 1 ]; then
+if [ "$NOCOLOR_EXIT" -eq 1 ] && echo "$NOCOLOR_OUTPUT" | grep -q "Failed to connect\|HTTP"; then
     skip "--no-color: network unavailable"
+elif [ "$NOCOLOR_EXIT" -eq 1 ]; then
+    fail "--no-color: unexpected error: $NOCOLOR_OUTPUT"
 elif echo "$NOCOLOR_OUTPUT" | grep -qP '\033\[' 2>/dev/null; then
     fail "--no-color output contains ANSI escape codes"
 elif echo "$NOCOLOR_OUTPUT" | grep -q $'\033\['; then
