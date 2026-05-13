@@ -8,6 +8,13 @@ of all Claude service components.
 
 ## Install
 
+### pip / pipx
+
+```bash
+pipx install cping-cli    # recommended (isolated env)
+pip install cping-cli      # or with pip
+```
+
 ### Homebrew
 
 ```bash

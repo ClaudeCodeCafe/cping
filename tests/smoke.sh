@@ -71,6 +71,19 @@ else
     pass "--no-color output is free of ANSI escape codes"
 fi
 
+# Test 6: python -m cping --version (package entry point)
+echo "Test: python -m cping --version"
+if [ -d "src/cping" ]; then
+    MODULE_OUTPUT=$(PYTHONPATH=src python3 -m cping --version 2>&1)
+    if echo "$MODULE_OUTPUT" | grep -q "cping 0\.1\.0"; then
+        pass "python -m cping --version outputs 'cping 0.1.0'"
+    else
+        fail "python -m cping --version output unexpected: $MODULE_OUTPUT"
+    fi
+else
+    fail "src/cping directory not found"
+fi
+
 # Summary
 echo
 echo "Results: $PASS passed, $FAIL failed"

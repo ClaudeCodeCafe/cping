@@ -26,6 +26,31 @@ jobs:
       - name: Run smoke tests
         run: bash tests/smoke.sh
 
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build tools
+        run: pip install build
+
+      - name: Build package
+        run: python -m build
+
+      - name: Install from wheel
+        run: pip install dist/*.whl
+
+      - name: Verify installed cping --version
+        run: cping --version | grep -q "cping 0.1.0"
+
+      - name: Verify python -m cping --version
+        run: python -m cping --version | grep -q "cping 0.1.0"
+
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -40,7 +65,7 @@ jobs:
         run: pip install ruff
 
       - name: Lint with ruff
-        run: ruff check cping
+        run: ruff check cping src/
 
       - name: Check formatting with ruff
-        run: ruff format --check cping
+        run: ruff format --check cping src/
