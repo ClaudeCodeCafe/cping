@@ -115,17 +115,27 @@ def display_status(data, use_color):
 
     status_raw = data.get("status") or {}
     status_info = status_raw if isinstance(status_raw, dict) else {}
-    raw_components = data.get("components") or []
+    components_raw = data.get("components") or []
+    if not isinstance(components_raw, list):
+        print(
+            "Warning: 'components' field is not a list, skipping",
+            file=sys.stderr,
+        )
+        components_raw = []
     incidents_raw = data.get("incidents") or []
     incidents = incidents_raw if isinstance(incidents_raw, list) else []
     page_raw = data.get("page") or {}
     page = page_raw if isinstance(page_raw, dict) else {}
 
-    # Validate component entries
-    components = [
-        c for c in raw_components
-        if isinstance(c, dict) and "name" in c and "status" in c
-    ]
+    # Validate component entries: require dict with string name and status
+    components = []
+    for c in components_raw:
+        if not isinstance(c, dict) or "status" not in c:
+            continue
+        name = c.get("name")
+        if not isinstance(name, str):
+            c = dict(c, name="Unknown")
+        components.append(c)
 
     # Overall status
     indicator_key = status_info.get("indicator", "none")
@@ -179,9 +189,7 @@ def display_status(data, use_color):
             inc_name = incident.get("name", "Unknown incident")
             inc_status = incident.get("status", "investigating")
             impact = incident.get("impact", "none")
-            symbol_i, color_i = INCIDENT_IMPACT.get(
-                impact, ("▲", YELLOW)
-            )
+            symbol_i, color_i = INCIDENT_IMPACT.get(impact, ("▲", YELLOW))
             indicator = colorize(symbol_i, color_i, use_color)
             print(f"  {indicator} {inc_name}")
             print(f"    Status: {inc_status}")
@@ -192,6 +200,8 @@ def display_status(data, use_color):
             if updates and isinstance(updates[0], dict):
                 latest = updates[0]
                 body = latest.get("body", "")
+                if not isinstance(body, str):
+                    body = str(body) if body else ""
                 if body:
                     truncated = body[:200]
                     if len(body) > 200:
@@ -244,10 +254,16 @@ def _get_visible_components(data):
     if not isinstance(data, dict):
         return []
     raw = data.get("components") or []
-    valid = [
-        c for c in raw
-        if isinstance(c, dict) and "name" in c and "status" in c
-    ]
+    if not isinstance(raw, list):
+        return []
+    valid = []
+    for c in raw:
+        if not isinstance(c, dict) or "status" not in c:
+            continue
+        name = c.get("name")
+        if not isinstance(name, str):
+            c = dict(c, name="Unknown")
+        valid.append(c)
     return [c for c in valid if c.get("showcase", False)]
 
 

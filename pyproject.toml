@@ -26,6 +26,9 @@ classifiers = [
     "Topic :: System :: Monitoring",
 ]
 
+[tool.ruff]
+target-version = "py38"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/cping"]
 

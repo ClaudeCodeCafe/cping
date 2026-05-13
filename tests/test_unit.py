@@ -67,8 +67,11 @@ class TestFetchStatus(unittest.TestCase):
         import urllib.error
 
         mock_urlopen.side_effect = urllib.error.HTTPError(
-            url=cli.STATUS_URL, code=503, msg="Service Unavailable",
-            hdrs=None, fp=None,
+            url=cli.STATUS_URL,
+            code=503,
+            msg="Service Unavailable",
+            hdrs=None,
+            fp=None,
         )
         with self.assertRaises(SystemExit) as ctx:
             cli.fetch_status()
@@ -113,8 +116,7 @@ class TestDisplayStatus(unittest.TestCase):
 
     def test_empty_components_returns_false(self):
         captured = io.StringIO()
-        with patch("sys.stdout", captured), \
-             patch("sys.stderr", io.StringIO()):
+        with patch("sys.stdout", captured), patch("sys.stderr", io.StringIO()):
             result = cli.display_status(EMPTY_COMPONENTS_DATA, use_color=False)
         self.assertFalse(result)
 
@@ -254,6 +256,111 @@ class TestMalformedNestedValues(unittest.TestCase):
         self.assertTrue(result)
 
 
+class TestComponentsNotIterable(unittest.TestCase):
+    """Tests for non-iterable or malformed components field."""
+
+    def test_components_is_integer(self):
+        """components: 123 should not crash, should return False."""
+        data = {
+            "page": {"updated_at": "2026-05-13T09:00:00Z"},
+            "status": {"indicator": "none"},
+            "components": 123,
+            "incidents": [],
+        }
+        captured = io.StringIO()
+        stderr_captured = io.StringIO()
+        with patch("sys.stdout", captured), patch("sys.stderr", stderr_captured):
+            result = cli.display_status(data, use_color=False)
+        self.assertFalse(result)
+        self.assertIn("not a list", stderr_captured.getvalue())
+
+    def test_component_name_null(self):
+        """Component with name: null should use fallback 'Unknown'."""
+        data = {
+            "page": {"updated_at": "2026-05-13T09:00:00Z"},
+            "status": {"indicator": "none"},
+            "components": [
+                {"name": None, "status": "operational", "showcase": True},
+            ],
+            "incidents": [],
+        }
+        captured = io.StringIO()
+        with patch("sys.stdout", captured):
+            result = cli.display_status(data, use_color=False)
+        self.assertTrue(result)
+        self.assertIn("Unknown", captured.getvalue())
+
+    def test_get_visible_components_non_list(self):
+        """_get_visible_components with non-list components returns []."""
+        data = {
+            "components": 123,
+        }
+        self.assertEqual(cli._get_visible_components(data), [])
+
+    def test_get_visible_components_name_null(self):
+        """_get_visible_components with name: null uses fallback."""
+        data = {
+            "components": [
+                {"name": None, "status": "operational", "showcase": True},
+            ],
+        }
+        result = cli._get_visible_components(data)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["name"], "Unknown")
+
+
+class TestIncidentBodyNonString(unittest.TestCase):
+    """Tests for non-string incident update body."""
+
+    def test_body_is_integer(self):
+        """Incident update body: 42 should not crash."""
+        data = {
+            "page": {"updated_at": "2026-05-13T09:00:00Z"},
+            "status": {"indicator": "minor"},
+            "components": [
+                {"name": "API", "status": "operational", "showcase": True},
+            ],
+            "incidents": [
+                {
+                    "name": "Test incident",
+                    "status": "investigating",
+                    "impact": "minor",
+                    "incident_updates": [{"body": 42}],
+                }
+            ],
+        }
+        captured = io.StringIO()
+        with patch("sys.stdout", captured):
+            result = cli.display_status(data, use_color=False)
+        self.assertTrue(result)
+        self.assertIn("42", captured.getvalue())
+
+    def test_body_is_none(self):
+        """Incident update body: None should not crash."""
+        data = {
+            "page": {"updated_at": "2026-05-13T09:00:00Z"},
+            "status": {"indicator": "minor"},
+            "components": [
+                {"name": "API", "status": "operational", "showcase": True},
+            ],
+            "incidents": [
+                {
+                    "name": "Test incident",
+                    "status": "investigating",
+                    "impact": "minor",
+                    "incident_updates": [{"body": None}],
+                }
+            ],
+        }
+        captured = io.StringIO()
+        with patch("sys.stdout", captured):
+            result = cli.display_status(data, use_color=False)
+        self.assertTrue(result)
+        # body=None should be coerced to "" and not displayed
+        output = captured.getvalue()
+        self.assertIn("Test incident", output)
+
+
 class TestMainExitCodes(unittest.TestCase):
     """Tests for main() exit codes."""
 
@@ -290,9 +397,9 @@ class TestColorEnvironment(unittest.TestCase):
     @patch("cping.cli.fetch_status", return_value=SAMPLE_DATA)
     def test_no_color_env(self, mock_fetch):
         captured = io.StringIO()
-        with patch("sys.argv", ["cping"]), \
-             patch("sys.stdout", captured), \
-             patch.dict(os.environ, {"NO_COLOR": "1"}, clear=False):
+        with patch("sys.argv", ["cping"]), patch("sys.stdout", captured), patch.dict(
+            os.environ, {"NO_COLOR": "1"}, clear=False
+        ):
             try:
                 cli.main()
             except SystemExit:
@@ -307,9 +414,9 @@ class TestColorEnvironment(unittest.TestCase):
         env = os.environ.copy()
         env.pop("NO_COLOR", None)
         env["FORCE_COLOR"] = "1"
-        with patch("sys.argv", ["cping"]), \
-             patch("sys.stdout", captured), \
-             patch.dict(os.environ, env, clear=True):
+        with patch("sys.argv", ["cping"]), patch("sys.stdout", captured), patch.dict(
+            os.environ, env, clear=True
+        ):
             try:
                 cli.main()
             except SystemExit:
