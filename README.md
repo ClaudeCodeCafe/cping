@@ -2,9 +2,9 @@
 
 Ping Claude's service status from the terminal.
 
-A single-file Python 3 CLI tool with zero external dependencies that checks
+A zero-dependency Python CLI tool that checks
 [status.claude.com](https://status.claude.com) and displays a formatted view
-of all Claude service components.
+of Claude service components.
 
 ## Install
 
@@ -37,6 +37,8 @@ cping
 ```
 Claude Service Status
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ● All Systems Operational
+
   ● claude.ai                   operational
   ● Claude API                  operational
   ● Claude Code                 operational

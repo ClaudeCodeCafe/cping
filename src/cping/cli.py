@@ -53,6 +53,14 @@ OVERALL_INDICATORS = {
     "maintenance": ("◆", GRAY, "Under Maintenance"),
 }
 
+# Incident impact mapping: (symbol, color)
+INCIDENT_IMPACT = {
+    "none": ("●", GREEN),
+    "minor": ("▲", YELLOW),
+    "major": ("✕", YELLOW),
+    "critical": ("✕", RED),
+}
+
 
 def fetch_status():
     """Fetch the status summary from the Atlassian Statuspage API."""
@@ -75,7 +83,7 @@ def fetch_status():
             file=sys.stderr,
         )
         sys.exit(1)
-    except (json.JSONDecodeError, OSError) as exc:
+    except (json.JSONDecodeError, UnicodeDecodeError, OSError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         sys.exit(1)
 
@@ -101,10 +109,20 @@ def format_status_line(name, status, use_color, name_width):
 
 def display_status(data, use_color):
     """Display the formatted status output."""
-    status_info = data.get("status", {})
-    components = data.get("components", [])
-    incidents = data.get("incidents", [])
-    page = data.get("page", {})
+    if not isinstance(data, dict):
+        print("Error: unexpected API response format", file=sys.stderr)
+        return False
+
+    status_info = data.get("status") or {}
+    raw_components = data.get("components") or []
+    incidents = data.get("incidents") or []
+    page = data.get("page") or {}
+
+    # Validate component entries
+    components = [
+        c for c in raw_components
+        if isinstance(c, dict) and "name" in c and "status" in c
+    ]
 
     # Overall status
     indicator_key = status_info.get("indicator", "none")
@@ -153,10 +171,12 @@ def display_status(data, use_color):
             print("Active Incidents")
         print(colorize("━" * 44, GRAY, use_color))
         for incident in incidents:
+            if not isinstance(incident, dict):
+                continue
             inc_name = incident.get("name", "Unknown incident")
             inc_status = incident.get("status", "investigating")
             impact = incident.get("impact", "none")
-            symbol_i, color_i = STATUS_INDICATORS.get(
+            symbol_i, color_i = INCIDENT_IMPACT.get(
                 impact, ("▲", YELLOW)
             )
             indicator = colorize(symbol_i, color_i, use_color)
@@ -182,9 +202,8 @@ def display_status(data, use_color):
     return True
 
 
-def all_operational(data):
-    """Check if all components are operational."""
-    components = data.get("components", [])
+def all_operational(components):
+    """Check if all given components are operational."""
     if not components:
         return False
     return all(c.get("status") == "operational" for c in components)
@@ -216,10 +235,23 @@ def build_parser():
     return parser
 
 
+def _get_visible_components(data):
+    """Extract showcase components from API data with validation."""
+    if not isinstance(data, dict):
+        return []
+    raw = data.get("components") or []
+    valid = [
+        c for c in raw
+        if isinstance(c, dict) and "name" in c and "status" in c
+    ]
+    return [c for c in valid if c.get("showcase", False)]
+
+
 def main():
     """Entry point."""
     # Handle SIGPIPE gracefully (e.g. when piping to head)
-    signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+    if hasattr(signal, "SIGPIPE"):
+        signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
     parser = build_parser()
     args = parser.parse_args()
@@ -245,7 +277,9 @@ def main():
         sys.exit(1)
 
     # Exit code: 0 if all operational, 2 if degraded
-    if not all_operational(data):
+    # Use the same showcase-filtered components that display_status() shows
+    visible = _get_visible_components(data)
+    if not all_operational(visible):
         sys.exit(2)
 
 

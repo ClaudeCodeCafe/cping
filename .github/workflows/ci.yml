@@ -40,7 +40,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Run unit tests
-        run: python -m pytest tests/test_unit.py -v
+        run: python -m unittest tests.test_unit -v
 
   package:
     runs-on: ubuntu-latest
@@ -99,17 +99,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Verify cping wrapper imports from src/cping/cli
+      - name: Verify cping and src/cping/cli.py are in sync
         run: |
-          grep -q "from cping.cli import main" ./cping || {
-            echo "ERROR: cping wrapper must import from cping.cli"
-            exit 1
-          }
-
-      - name: Verify cping wrapper is a thin wrapper
-        run: |
-          LINES=$(wc -l < ./cping)
-          if [ "$LINES" -gt 15 ]; then
-            echo "ERROR: cping wrapper should be a thin wrapper (got $LINES lines)"
+          # Strip the shebang line from the standalone cping script
+          tail -n +2 ./cping > /tmp/cping_body.py
+          # Compare with cli.py (they should be identical)
+          if ! diff -u src/cping/cli.py /tmp/cping_body.py; then
+            echo "ERROR: cping (minus shebang) and src/cping/cli.py are out of sync"
             exit 1
           fi
+          echo "OK: cping and src/cping/cli.py are in sync"

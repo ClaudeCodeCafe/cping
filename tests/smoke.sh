@@ -102,12 +102,14 @@ else
     fail "src/cping directory not found"
 fi
 
-# Test 7: cping wrapper imports from src/cping/cli
-echo "Test: cping wrapper imports from src/cping/cli"
-if grep -q "from cping.cli import main" ./cping; then
-    pass "cping wrapper imports from cping.cli"
+# Test 7: cping standalone script is in sync with src/cping/cli.py
+echo "Test: cping standalone is in sync with src/cping/cli.py"
+CPING_BODY=$(tail -n +2 ./cping)
+CLI_BODY=$(cat src/cping/cli.py)
+if [ "$CPING_BODY" = "$CLI_BODY" ]; then
+    pass "cping (minus shebang) matches src/cping/cli.py"
 else
-    fail "cping wrapper does not import from cping.cli"
+    fail "cping and src/cping/cli.py are out of sync"
 fi
 
 # Summary

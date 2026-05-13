@@ -99,13 +99,13 @@ class TestAllOperational(unittest.TestCase):
     """Tests for all_operational()."""
 
     def test_all_operational(self):
-        self.assertTrue(cli.all_operational(SAMPLE_DATA))
+        self.assertTrue(cli.all_operational(SAMPLE_DATA["components"]))
 
     def test_degraded(self):
-        self.assertFalse(cli.all_operational(DEGRADED_DATA))
+        self.assertFalse(cli.all_operational(DEGRADED_DATA["components"]))
 
     def test_empty_components(self):
-        self.assertFalse(cli.all_operational(EMPTY_COMPONENTS_DATA))
+        self.assertFalse(cli.all_operational([]))
 
 
 class TestDisplayStatus(unittest.TestCase):
@@ -174,8 +174,8 @@ class TestMainExitCodes(unittest.TestCase):
 
     @patch("cping.cli.fetch_status", return_value=SAMPLE_DATA)
     @patch("sys.stdout", new_callable=io.StringIO)
-    def test_json_always_exits_0(self, mock_stdout, mock_fetch):
-        """--json mode always exits 0, even when components are degraded."""
+    def test_json_operational_exits_0(self, mock_stdout, mock_fetch):
+        """--json mode exits 0 when all components are operational."""
         with patch("sys.argv", ["cping", "--json"]):
             with self.assertRaises(SystemExit) as ctx:
                 cli.main()
