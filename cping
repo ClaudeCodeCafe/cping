@@ -140,6 +140,8 @@ def display_status(data, use_color):
 
     # Overall status
     indicator_key = status_info.get("indicator", "none")
+    if not isinstance(indicator_key, str):
+        indicator_key = "none"
     symbol, color, description = OVERALL_INDICATORS.get(
         indicator_key, ("?", GRAY, "Unknown")
     )
@@ -174,6 +176,8 @@ def display_status(data, use_color):
     for component in visible_components:
         name = component.get("name", "Unknown")
         comp_status = component.get("status", "operational")
+        if not isinstance(comp_status, str):
+            comp_status = "operational"
         print(format_status_line(name, comp_status, use_color, name_width))
 
     # Show active incidents if any
@@ -190,6 +194,8 @@ def display_status(data, use_color):
             inc_name = incident.get("name", "Unknown incident")
             inc_status = incident.get("status", "investigating")
             impact = incident.get("impact", "none")
+            if not isinstance(impact, str):
+                impact = "none"
             symbol_i, color_i = INCIDENT_IMPACT.get(impact, ("▲", YELLOW))
             indicator = colorize(symbol_i, color_i, use_color)
             print(f"  {indicator} {inc_name}")

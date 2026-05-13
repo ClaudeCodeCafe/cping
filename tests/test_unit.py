@@ -425,5 +425,66 @@ class TestColorEnvironment(unittest.TestCase):
         self.assertIn("\033[", output)
 
 
+class TestDictLookupTypeGuards(unittest.TestCase):
+    """Tests for isinstance(x, str) guards on dict lookup values (Round 6)."""
+
+    def test_component_status_is_integer(self):
+        """Component with status: 42 should fall back to 'operational'."""
+        data = {
+            "page": {"updated_at": "2026-05-13T09:00:00Z"},
+            "status": {"indicator": "none"},
+            "components": [
+                {"name": "API", "status": 42, "showcase": True},
+            ],
+            "incidents": [],
+        }
+        captured = io.StringIO()
+        with patch("sys.stdout", captured):
+            result = cli.display_status(data, use_color=False)
+        self.assertTrue(result)
+        output = captured.getvalue()
+        self.assertIn("operational", output)
+
+    def test_overall_indicator_is_null(self):
+        """Overall status with indicator: null should fall back to 'none'."""
+        data = {
+            "page": {"updated_at": "2026-05-13T09:00:00Z"},
+            "status": {"indicator": None},
+            "components": [
+                {"name": "API", "status": "operational", "showcase": True},
+            ],
+            "incidents": [],
+        }
+        captured = io.StringIO()
+        with patch("sys.stdout", captured):
+            result = cli.display_status(data, use_color=False)
+        self.assertTrue(result)
+        output = captured.getvalue()
+        self.assertIn("All Systems Operational", output)
+
+    def test_incident_impact_is_list(self):
+        """Incident with impact: [1, 2, 3] should fall back to 'none'."""
+        data = {
+            "page": {"updated_at": "2026-05-13T09:00:00Z"},
+            "status": {"indicator": "minor"},
+            "components": [
+                {"name": "API", "status": "operational", "showcase": True},
+            ],
+            "incidents": [
+                {
+                    "name": "Test incident",
+                    "status": "investigating",
+                    "impact": [1, 2, 3],
+                }
+            ],
+        }
+        captured = io.StringIO()
+        with patch("sys.stdout", captured):
+            result = cli.display_status(data, use_color=False)
+        self.assertTrue(result)
+        output = captured.getvalue()
+        self.assertIn("Test incident", output)
+
+
 if __name__ == "__main__":
     unittest.main()
