@@ -2,11 +2,18 @@
 
 import argparse
 import json
+import os
+import signal
 import sys
 import urllib.error
 import urllib.request
 
-__version__ = "0.1.0"
+try:
+    from importlib.metadata import version as _metadata_version
+
+    __version__ = _metadata_version("cping-cli")
+except Exception:
+    __version__ = "0.1.0"  # fallback for standalone execution
 
 STATUS_URL = "https://status.claude.com/api/v2/summary.json"
 REQUEST_TIMEOUT = 10
@@ -56,11 +63,17 @@ def fetch_status():
     try:
         with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT) as resp:
             return json.loads(resp.read().decode("utf-8"))
-    except urllib.error.URLError as exc:
-        print(f"Error: Failed to connect to status page: {exc.reason}", file=sys.stderr)
-        sys.exit(1)
     except urllib.error.HTTPError as exc:
-        print(f"Error: HTTP {exc.code} from status page", file=sys.stderr)
+        print(
+            f"Error: HTTP {exc.code} from {STATUS_URL}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    except urllib.error.URLError as exc:
+        print(
+            f"Error: Failed to connect to {STATUS_URL}: {exc.reason}",
+            file=sys.stderr,
+        )
         sys.exit(1)
     except (json.JSONDecodeError, OSError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
@@ -106,13 +119,21 @@ def display_status(data, use_color):
     print(title)
     print(colorize("━" * 44, GRAY, use_color))
 
-    # Filter out top-level "page" component if present
-    visible_components = [
-        c for c in components if c.get("group", True) is not False
-    ]
+    # Display overall status line
+    overall_indicator = colorize(symbol, color, use_color)
+    overall_text = colorize(description, color, use_color)
+    print(f"  {overall_indicator} {overall_text}")
+    print()
+
+    # Filter to showcased components only
+    visible_components = [c for c in components if c.get("showcase", False)]
 
     if not visible_components:
-        visible_components = components
+        print(
+            "  Warning: No component data available",
+            file=sys.stderr,
+        )
+        return False
 
     # Calculate name width for alignment
     names = [c.get("name", "") for c in visible_components]
@@ -148,22 +169,25 @@ def display_status(data, use_color):
                 latest = updates[0]
                 body = latest.get("body", "")
                 if body:
-                    # Wrap long update text
-                    print(f"    {body[:200]}")
+                    truncated = body[:200]
+                    if len(body) > 200:
+                        truncated += "..."
+                    print(f"    {truncated}")
 
     # Updated timestamp
     updated_at = page.get("updated_at", status_info.get("updated_at", "N/A"))
     print()
     print(colorize(f"Updated: {updated_at}", GRAY, use_color))
 
+    return True
+
 
 def all_operational(data):
     """Check if all components are operational."""
     components = data.get("components", [])
-    return all(
-        c.get("status") == "operational"
-        for c in components
-    )
+    if not components:
+        return False
+    return all(c.get("status") == "operational" for c in components)
 
 
 def build_parser():
@@ -173,14 +197,16 @@ def build_parser():
         description="Ping Claude's service status from the terminal.",
     )
     parser.add_argument(
-        "-v", "--version",
+        "-v",
+        "--version",
         action="version",
         version=f"cping {__version__}",
     )
     parser.add_argument(
-        "-j", "--json",
+        "-j",
+        "--json",
         action="store_true",
-        help="Output raw JSON",
+        help="Output raw JSON (always exits 0 on success)",
     )
     parser.add_argument(
         "--no-color",
@@ -192,18 +218,31 @@ def build_parser():
 
 def main():
     """Entry point."""
+    # Handle SIGPIPE gracefully (e.g. when piping to head)
+    signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+
     parser = build_parser()
     args = parser.parse_args()
 
     # Determine if color should be used
-    use_color = not args.no_color and sys.stdout.isatty()
+    # Priority: --no-color flag > NO_COLOR env > FORCE_COLOR env > isatty()
+    if args.no_color or os.environ.get("NO_COLOR") is not None:
+        use_color = False
+    elif os.environ.get("FORCE_COLOR") is not None:
+        use_color = True
+    else:
+        use_color = sys.stdout.isatty()
 
     data = fetch_status()
 
     if args.json:
         print(json.dumps(data, indent=2))
-    else:
-        display_status(data, use_color)
+        sys.exit(0)
+
+    has_components = display_status(data, use_color)
+
+    if not has_components:
+        sys.exit(1)
 
     # Exit code: 0 if all operational, 2 if degraded
     if not all_operational(data):

@@ -57,11 +57,15 @@ Updated: 2026-05-13T09:00:00Z
 
 ### Exit Codes
 
+**Default mode:**
+
 | Code | Meaning                                  |
 | ---- | ---------------------------------------- |
 | 0    | All systems operational                  |
 | 1    | Error (network, parse, etc.)             |
 | 2    | One or more components not operational   |
+
+**`--json` mode:** Always exits 0 on success (consumers parse the JSON themselves). Exits 1 on error.
 
 ### Status Indicators
 
@@ -72,7 +76,7 @@ Updated: 2026-05-13T09:00:00Z
 
 ## Requirements
 
-- Python 3.6+
+- Python 3.8+
 
 No external packages required. Uses only the Python standard library.
 

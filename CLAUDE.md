@@ -9,14 +9,16 @@ at `https://status.claude.com/api/v2/summary.json`.
 ## Structure
 
 ```
-cping                  # Standalone CLI script (direct execution, Homebrew)
+cping                  # Thin wrapper (imports from src/cping/cli.py)
 src/cping/
   __init__.py          # Package init, re-exports __version__
   __main__.py          # python -m cping support
-  cli.py               # Core logic (canonical source, mirrors ./cping)
+  cli.py               # Core logic (single source of truth)
 pyproject.toml         # pip/pipx packaging (PyPI name: cping-cli)
-tests/smoke.sh         # Smoke tests
+tests/smoke.sh         # Smoke tests (network-skip-friendly)
+tests/test_unit.py     # Unit tests with mocked HTTP
 .github/workflows/     # CI configuration
+CHANGELOG.md           # Version changelog
 ```
 
 ## Tech Stack
@@ -48,11 +50,17 @@ Run smoke tests:
 bash tests/smoke.sh
 ```
 
+Run unit tests:
+
+```bash
+python -m pytest tests/test_unit.py -v
+```
+
 ## Rules
 
 - Include `Co-Authored-By: Claude` in commit messages (ClaudeCodeCafe org rule)
 - Keep zero external dependencies
-- Keep `./cping` standalone script and `src/cping/cli.py` in sync (identical logic)
+- `./cping` is a thin wrapper that imports from `src/cping/cli.py` (single source of truth)
 - Follow PEP 8
 - English only for all code, comments, and docs
 - Exit codes: 0 = all operational, 1 = error, 2 = degraded

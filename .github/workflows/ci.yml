@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.9", "3.12"]
+        python-version: ["3.8", "3.9", "3.12"]
     steps:
       - uses: actions/checkout@v4
 
@@ -25,6 +25,22 @@ jobs:
 
       - name: Run smoke tests
         run: bash tests/smoke.sh
+
+  unit-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.9", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Run unit tests
+        run: python -m pytest tests/test_unit.py -v
 
   package:
     runs-on: ubuntu-latest
@@ -51,6 +67,14 @@ jobs:
       - name: Verify python -m cping --version
         run: python -m cping --version | grep -q "cping 0.1.0"
 
+      - name: Install from sdist
+        run: |
+          pip uninstall -y cping-cli
+          pip install dist/*.tar.gz
+
+      - name: Verify sdist install
+        run: cping --version | grep -q "cping 0.1.0"
+
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -65,7 +89,27 @@ jobs:
         run: pip install ruff
 
       - name: Lint with ruff
-        run: ruff check cping src/
+        run: ruff check cping src/ tests/
 
       - name: Check formatting with ruff
-        run: ruff format --check cping src/
+        run: ruff format --check cping src/ tests/
+
+  sync-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify cping wrapper imports from src/cping/cli
+        run: |
+          grep -q "from cping.cli import main" ./cping || {
+            echo "ERROR: cping wrapper must import from cping.cli"
+            exit 1
+          }
+
+      - name: Verify cping wrapper is a thin wrapper
+        run: |
+          LINES=$(wc -l < ./cping)
+          if [ "$LINES" -gt 15 ]; then
+            echo "ERROR: cping wrapper should be a thin wrapper (got $LINES lines)"
+            exit 1
+          fi
