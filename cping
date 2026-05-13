@@ -306,7 +306,19 @@ def main():
     # Exit code: 0 if all operational, 2 if degraded
     # Use the same showcase-filtered components that display_status() shows
     visible = _get_visible_components(data)
-    if not all_operational(visible):
+
+    # Exit 2 if any component is degraded OR page-level status indicates an issue
+    status_info = data.get("status", {})
+    if not isinstance(status_info, dict):
+        status_info = {}
+    indicator = status_info.get("indicator", "none")
+    if not isinstance(indicator, str):
+        indicator = "none"
+
+    components_degraded = not all_operational(visible)
+    page_degraded = indicator not in ("none", "")
+
+    if components_degraded or page_degraded:
         sys.exit(2)
 
 

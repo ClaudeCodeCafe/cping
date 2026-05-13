@@ -361,6 +361,17 @@ class TestIncidentBodyNonString(unittest.TestCase):
         self.assertIn("Test incident", output)
 
 
+PAGE_DEGRADED_COMPONENTS_OK_DATA = {
+    "page": {"updated_at": "2026-05-13T09:00:00Z"},
+    "status": {"indicator": "major", "description": "Partial System Outage"},
+    "components": [
+        {"name": "claude.ai", "status": "operational", "showcase": True},
+        {"name": "Claude API", "status": "operational", "showcase": True},
+    ],
+    "incidents": [],
+}
+
+
 class TestMainExitCodes(unittest.TestCase):
     """Tests for main() exit codes."""
 
@@ -389,6 +400,29 @@ class TestMainExitCodes(unittest.TestCase):
             with self.assertRaises(SystemExit) as ctx:
                 cli.main()
             self.assertEqual(ctx.exception.code, 0)
+
+    @patch("cping.cli.fetch_status", return_value=PAGE_DEGRADED_COMPONENTS_OK_DATA)
+    @patch("sys.stdout", new_callable=io.StringIO)
+    def test_page_indicator_major_all_components_ok_exits_2(
+        self, mock_stdout, mock_fetch
+    ):
+        """Page-level indicator='major' with all components operational exits 2."""
+        with patch("sys.argv", ["cping", "--no-color"]):
+            with self.assertRaises(SystemExit) as ctx:
+                cli.main()
+            self.assertEqual(ctx.exception.code, 2)
+
+    @patch("cping.cli.fetch_status", return_value=SAMPLE_DATA)
+    @patch("sys.stdout", new_callable=io.StringIO)
+    def test_page_indicator_none_all_components_ok_exits_0(
+        self, mock_stdout, mock_fetch
+    ):
+        """Page-level indicator='none' with all components operational exits 0."""
+        with patch("sys.argv", ["cping", "--no-color"]):
+            try:
+                cli.main()
+            except SystemExit as exc:
+                self.fail(f"main() raised SystemExit with code {exc.code}, expected clean exit")
 
 
 class TestColorEnvironment(unittest.TestCase):
