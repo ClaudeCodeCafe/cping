@@ -270,6 +270,10 @@ def _get_visible_components(data):
         name = c.get("name")
         if not isinstance(name, str):
             c = dict(c, name="Unknown")
+        # Normalize non-string status so both display and exit-code logic agree
+        comp_status = c.get("status", "operational")
+        if not isinstance(comp_status, str):
+            c = dict(c, status="operational")
         valid.append(c)
     return [c for c in valid if c.get("showcase", False)]
 

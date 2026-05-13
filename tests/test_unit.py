@@ -422,7 +422,9 @@ class TestMainExitCodes(unittest.TestCase):
             try:
                 cli.main()
             except SystemExit as exc:
-                self.fail(f"main() raised SystemExit with code {exc.code}, expected clean exit")
+                self.fail(
+                    f"main() raised SystemExit with code {exc.code}, expected clean exit"
+                )
 
 
 class TestColorEnvironment(unittest.TestCase):
@@ -463,7 +465,11 @@ class TestDictLookupTypeGuards(unittest.TestCase):
     """Tests for isinstance(x, str) guards on dict lookup values (Round 6)."""
 
     def test_component_status_is_integer(self):
-        """Component with status: 42 should fall back to 'operational'."""
+        """Component with status: 42 should fall back to 'operational'.
+
+        Both display and exit-code logic must agree: display shows
+        'operational' AND all_operational() returns True (exit 0).
+        """
         data = {
             "page": {"updated_at": "2026-05-13T09:00:00Z"},
             "status": {"indicator": "none"},
@@ -478,6 +484,13 @@ class TestDictLookupTypeGuards(unittest.TestCase):
         self.assertTrue(result)
         output = captured.getvalue()
         self.assertIn("operational", output)
+
+        # _get_visible_components normalizes status, so exit-code logic agrees
+        visible = cli._get_visible_components(data)
+        self.assertTrue(
+            cli.all_operational(visible),
+            "all_operational() should return True after status normalization",
+        )
 
     def test_overall_indicator_is_null(self):
         """Overall status with indicator: null should fall back to 'none'."""

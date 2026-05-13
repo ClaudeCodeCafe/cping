@@ -61,11 +61,11 @@ Updated: 2026-05-13T09:00:00Z
 
 **Default mode:**
 
-| Code | Meaning                                  |
-| ---- | ---------------------------------------- |
-| 0    | All systems operational                  |
-| 1    | Error (network, parse, etc.)             |
-| 2    | One or more components not operational   |
+| Code | Meaning                                                    |
+| ---- | ---------------------------------------------------------- |
+| 0    | All systems operational                                    |
+| 1    | Error (network, parse, etc.)                               |
+| 2    | Service degradation detected (component-level or page-level) |
 
 **`--json` mode:** Always exits 0 on success (consumers parse the JSON themselves). Exits 1 on error.
 
